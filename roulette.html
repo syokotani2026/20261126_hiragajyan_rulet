@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ひらがじゃん研究室　試作001号 - お題ルーレット</title>
+<style>
+  body {
+    font-family: sans-serif;
+    background-color: #f4f7f6;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px 10px;
+    color: #333;
+  }
+  .container {
+    background: #fff;
+    padding: 25px 20px;
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    text-align: center;
+    width: 100%;
+    max-width: 440px;
+  }
+  .lab-title {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #666;
+    margin: 0 0 4px 0;
+    letter-spacing: 0.05em;
+  }
+  h1 { font-size: 1.5rem; margin: 0 0 18px 0; }
+  .options { margin-bottom: 18px; font-size: 1.05rem; }
+  .options label { margin: 0 10px; cursor: pointer; }
+  
+  .spin-btn {
+    background-color: #ff6b6b;
+    color: white;
+    border: none;
+    padding: 14px 32px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: 0.2s;
+    width: 80%;
+  }
+  .spin-btn:hover { background-color: #ee5253; }
+  .spin-btn:disabled { background-color: #ccc; cursor: not-allowed; }
+
+  .result-box {
+    margin-top: 20px;
+    padding: 20px;
+    background-color: #fff9db;
+    border: 2px dashed #fcc419;
+    border-radius: 12px;
+    min-height: 70px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.25rem;
+    font-weight: bold;
+  }
+  .cross { color: #ff6b6b; margin: 6px 0; font-size: 1rem; }
+
+  /* 編集エリアのスタイル */
+  details {
+    margin-top: 25px;
+    text-align: left;
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+  }
+  summary {
+    cursor: pointer;
+    font-weight: bold;
+    color: #555;
+    font-size: 0.95rem;
+    user-select: none;
+  }
+  .add-form {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .add-form input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 0.95rem;
+  }
+  .add-form button {
+    background-color: #339af0;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .add-form button:hover { background-color: #228be6; }
+
+  .topic-list {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0 0 0;
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid #eee;
+    border-radius: 8px;
+  }
+  .topic-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid #eee;
+    font-size: 0.9rem;
+  }
+  .topic-list li:last-child { border-bottom: none; }
+  .del-btn {
+    background: #ffe3e3;
+    color: #e03131;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+  }
+  .del-btn:hover { background: #ffc9c9; }
+  .reset-area {
+    margin-top: 10px;
+    text-align: right;
+  }
+  .reset-btn {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 0.8rem;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="lab-title">ひらがじゃん研究室　試作001号</div>
+  <h1>🎲 お題ルーレット</h1>
+  <div class="options">
+    <label><input type="radio" name="count" value="1" checked> 1つ選ぶ</label>
+    <label><input type="radio" name="count" value="2"> 2つ組み合わせる</label>
+  </div>
+  <button class="spin-btn" id="spinBtn" onclick="spin()">ルーレットを回す！</button>
+  <div class="result-box" id="result">ここに結果が出ます</div>
+
+  <!-- 折りたたみ式の編集メニュー -->
+  <details>
+    <summary>⚙️ お題の追加・編集（現在 <span id="topicCount">0</span> 個）</summary>
+    <div class="add-form">
+      <input type="text" id="newTopicInput" placeholder="新しいお題を入力..." onkeypress="if(event.key==='Enter') addTopic()">
+      <button onclick="addTopic()">追加</button>
+    </div>
+    <ul class="topic-list" id="topicList"></ul>
+    <div class="reset-area">
+      <button class="reset-btn" onclick="resetTopics()">初期のお題リストに戻す</button>
+    </div>
+  </details>
+</div>
+
+<script>
+  const defaultTopics = [
+    "まるいもの",
+    "いきもの（植物×）",
+    "スポーツ（種目名○）",
+    "学校にあるもの",
+    "甘いもの",
+    "植物",
+    "国名/地名",
+    "体の部位",
+    "長いもの",
+    "大缶ひとの名前",
+    "のりもの",
+    "赤いもの"
+  ];
+
+  // 保存されたデータがあれば読み込み、なければ初期データを使用
+  let topics = JSON.parse(localStorage.getItem("myRouletteTopics")) || [...defaultTopics];
+
+  // データをブラウザに保存し、画面リストを更新する関数
+  function saveAndRender() {
+    localStorage.setItem("myRouletteTopics", JSON.stringify(topics));
+    document.getElementById("topicCount").textContent = topics.length;
+    
+    const list = document.getElementById("topicList");
+    list.innerHTML = "";
+    topics.forEach((topic, index) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span>${escapeHtml(topic)}</span> <button class="del-btn" onclick="deleteTopic(${index})">削除</button>`;
+      list.appendChild(li);
+    });
+  }
+
+  // お題の追加
+  function addTopic() {
+    const input = document.getElementById("newTopicInput");
+    const text = input.value.trim();
+    if (!text) return;
+    topics.unshift(text);
+    input.value = "";
+    saveAndRender();
+  }
+
+  // お題の削除
+  function deleteTopic(index) {
+    topics.splice(index, 1);
+    saveAndRender();
+  }
+
+  // 初期リストへリセット
+  function resetTopics() {
+    if (confirm("お題を最初の状態に戻しますか？（追加したものは消えます）")) {
+      topics = [...defaultTopics];
+      saveAndRender();
+    }
+  }
+
+  // HTMLタグの誤作動防止
+  function escapeHtml(str) {
+    return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  // ルーレット実行
+  function spin() {
+    const count = parseInt(document.querySelector('input[name="count"]:checked').value);
+    if (topics.length < count) {
+      alert(`お題をあと ${count - topics.length} 個以上追加してください！`);
+      return;
+    }
+
+    const btn = document.getElementById("spinBtn");
+    const resultBox = document.getElementById("result");
+    btn.disabled = true;
+    let ticks = 0;
+
+    const timer = setInterval(() => {
+      const r1 = topics[Math.floor(Math.random() * topics.length)];
+      if (count === 1) {
+        resultBox.innerHTML = `<div>${escapeHtml(r1)}</div>`;
+      } else {
+        const r2 = topics[Math.floor(Math.random() * topics.length)];
+        resultBox.innerHTML = `<div>${escapeHtml(r1)}</div><div class="cross">×</div><div>${escapeHtml(r2)}</div>`;
+      }
+      ticks++;
+
+      if (ticks > 15) {
+        clearInterval(timer);
+        const shuffled = [...topics].sort(() => 0.5 - Math.random());
+        if (count === 1) {
+          resultBox.innerHTML = `<div>🎉 ${escapeHtml(shuffled[0])}</div>`;
+        } else {
+          resultBox.innerHTML = `<div>🎉 ${escapeHtml(shuffled[0])}</div><div class="cross">×</div><div>🎉 ${escapeHtml(shuffled[1])}</div>`;
+        }
+        btn.disabled = false;
+      }
+    }, 60);
+  }
+
+  // 初回表示の実行
+  saveAndRender();
+</script>
+
+</body>
+</html>
